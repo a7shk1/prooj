@@ -1,0 +1,80 @@
+name: var_app
+description: "Var_IPTV"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Firebase
+  firebase_core: ^3.15.2
+  firebase_auth: ^5.7.0
+  cloud_firestore: ^5.6.12
+
+  # Device ID + Local cache
+  device_info_plus: ^10.1.2
+  shared_preferences: ^2.3.3
+
+  # HTTP Requests + Date formatting
+  http: ^1.2.0
+  intl: ^0.19.0
+
+  # WebView لعرض جدول المباريات والأخبار
+  webview_flutter: ^4.8.0
+
+  # Local Notifications (إشعارات محلية للتذكير بالمباريات)
+  flutter_local_notifications: ^17.2.1
+  timezone: ^0.9.4
+
+  # Permissions (إذن التخزين + الإشعارات)
+  permission_handler: ^11.3.1
+
+  # لفتح الروابط الخارجية (VLC, MXPlayer, iOS Player)
+  url_launcher: ^6.3.0
+
+  # لقراءة رقم الإصدار من pubspec (الإصدار الحالي)
+  package_info_plus: ^8.0.0
+
+  # لفتح تطبيق أندرويد آخر (VAR Player)
+  android_intent_plus: ^5.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1   # توليد الأيقونة
+  flutter_native_splash: ^2.4.0     # شاشة الإقلاع (Splash)
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/logo.png
+    - assets/images/
+
+# 👇 إعدادات أيقونة التطبيق
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/images/logo.png"
+  adaptive_icon_monochrome: "assets/images/logo.png"
+
+# 👇 إعدادات شاشة الإقلاع (Splash screen)
+flutter_native_splash:
+  color: "#000000"                 # خلفية سودة (نفس الثيم)
+  image: assets/images/logo.png    # اللوغو الجديد
+  android: true
+  ios: true
+  web: false
+  android_gravity: center           # يثبّت اللوغو بالوسط على أندرويد
+  ios_content_mode: scaleAspectFit  # يمنع القص على iOS
+  android_12:
+    image: assets/images/logo.png
+    icon_background_color: "#000000"

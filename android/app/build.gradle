@@ -1,0 +1,49 @@
+plugins {
+    id "com.android.application"
+    id "dev.flutter.flutter-gradle-plugin"  // خليه ثاني حتى ما يصير afterEvaluate
+    id "org.jetbrains.kotlin.android"
+    id "com.google.gms.google-services"     // ✅ لازم يكون موجود وآخر واحد
+}
+
+android {
+    namespace = "com.varapp.iptv"
+
+    compileSdk = 34
+    ndkVersion = flutter.ndkVersion
+
+    defaultConfig {
+        applicationId = "com.varapp.iptv"
+        minSdk = flutter.minSdkVersion   // ≥ 21
+        targetSdk = 34
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    // Java 17 + desugaring
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
+
+    kotlinOptions { jvmTarget = "17" }
+
+    // اختياري: تثبيت Build-Tools صراحة
+    buildToolsVersion = "34.0.0"
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    // desugaring
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
+    // ما تحتاج تضيف Firebase BOM هنا إذا تستخدم FlutterFire؛ مو مشكلة لو ضفته أيضاً.
+}

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "141817304501",
+    "project_id": "varapp-230e2",
+    "storage_bucket": "varapp-230e2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:141817304501:android:b7d7bea683b83a924975fc",
+        "android_client_info": {
+          "package_name": "com.varapp.iptv"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnp9XgMBTxGnzMKYDQzEUJ0S2FGlWxnfo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
