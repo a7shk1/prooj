@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/channels.dart';
 import '../data/channels_repository.dart';
@@ -58,19 +60,32 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     required String quality,
     required String name,
   }) async {
+    final token = base64Url.encode(utf8.encode(url));
+    final uri = Uri(
+      scheme: _scheme,
+      host: _host,
+      queryParameters: {'t': token, 'q': quality, 'n': name},
+    );
+
     try {
-      final token = base64Url.encode(utf8.encode(url));
-      final uri = Uri(
-        scheme: _scheme,
-        host: _host,
-        queryParameters: {'t': token, 'q': quality, 'n': name},
-      );
-      final intent = AndroidIntent(
-        action: 'action_view',
-        data: uri.toString(),
-        package: _playerPackage,
-      );
-      await intent.launch();
+      if (Platform.isAndroid) {
+        // أندرويد → Intent
+        final intent = AndroidIntent(
+          action: 'action_view',
+          data: uri.toString(),
+          package: _playerPackage,
+        );
+        await intent.launch();
+      } else if (Platform.isIOS) {
+        // iOS → URL Launcher
+        final iosUrl = uri.toString();
+        if (await canLaunchUrl(Uri.parse(iosUrl))) {
+          await launchUrl(Uri.parse(iosUrl),
+              mode: LaunchMode.externalApplication);
+        } else {
+          throw "VAR Player not installed";
+        }
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

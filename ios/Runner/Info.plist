@@ -31,10 +31,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 
+	<!-- شاشات التشغيل -->
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string>Main</string>
 
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
@@ -55,11 +54,23 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 
-	<!-- السماح بروابط HTTP -->
+	<!-- السماح بروابط HTTP + استثناء لموقع المباريات -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>yalla1shoot.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<false/>
+			</dict>
+		</dict>
 	</dict>
 
 	<!-- URL Scheme للمشغل -->
@@ -80,6 +91,5 @@
 	<array>
 		<string>audio</string>
 	</array>
-
 </dict>
 </plist>
