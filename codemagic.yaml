@@ -1,6 +1,6 @@
 workflows:
-  flutter-app:
-    name: Flutter App
+  ios-app:
+    name: iOS App
     max_build_duration: 60
     environment:
       flutter: stable
@@ -8,10 +8,15 @@ workflows:
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
-      - name: Build Android APK
-        script: flutter build apk --release
-      - name: Build iOS (unsigned)
-        script: flutter build ios --release --no-codesign
+
+      # 👇 نسخ GoogleService-Info.plist إلى مكانه
+      - name: Copy GoogleService-Info.plist
+        script: |
+          echo "📂 نسخ GoogleService-Info.plist إلى Runner"
+          cp ./ios/Runner/GoogleService-Info.plist $CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist
+
+      - name: Build iOS IPA (unsigned)
+        script: flutter build ipa --release --no-codesign
+
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
-      - build/ios/iphoneos/*.app
+      - build/ios/ipa/*.ipa
