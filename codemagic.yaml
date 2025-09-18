@@ -5,7 +5,7 @@ workflows:
     instance_type: mac_mini_m2
 
     environment:
-      flutter: 3.35.4      # يطابق Dart ^3.5.3
+      flutter: 3.35.4
       xcode: latest
 
     scripts:
@@ -16,14 +16,15 @@ workflows:
           flutter pub get
           flutter precache --ios
 
-      - name: Prepare CocoaPods
+      - name: Reinstall CocoaPods cleanly
         script: |
+          set -e
           cd ios
+          rm -rf Pods Podfile.lock
           pod repo update
           pod install
           cd ..
 
-      # ⬇️ بناء Release لجهاز حقيقي بدون توقيع — نأخذ .app من مجلد Products
       - name: Xcode build (no signing) → .app
         script: |
           set -e
@@ -41,11 +42,10 @@ workflows:
             PROVISIONING_PROFILE_SPECIFIER="" \
             IPHONEOS_DEPLOYMENT_TARGET=13.0
 
-          echo "Listing build products:"
+          echo "Products:"
           ls -R build/Build/Products || true
 
     artifacts:
-      # هذا هو مسار .app الناتج من خطوة build أعلاه
       - build/Build/Products/Release-iphoneos/Runner.app
 
     publishing:
