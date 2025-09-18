@@ -21,8 +21,9 @@ workflows:
         script: |
           set -e
           if [ ! -f ios/Podfile ]; then
-            cat > ios/Podfile <<'EOF'
-platform :ios, '13.0'
+            mkdir -p ios
+            printf "%s\n" \
+"platform :ios, '13.0'
 use_frameworks! :linkage => :static
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 flutter_root = ENV['FLUTTER_ROOT']
@@ -36,10 +37,9 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
   end
-end
-EOF
+end" > ios/Podfile
           fi
-          echo "Using Podfile:"
+          echo "=== Podfile ==="
           cat ios/Podfile
 
       - name: Reinstall CocoaPods cleanly
@@ -67,7 +67,7 @@ EOF
             DEVELOPMENT_TEAM="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
             IPHONEOS_DEPLOYMENT_TARGET=13.0
-          echo "Products:"
+          echo "=== Build Products ==="
           ls -R build/Build/Products || true
 
     artifacts:
