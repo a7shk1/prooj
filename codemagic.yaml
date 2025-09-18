@@ -21,6 +21,7 @@ workflows:
         script: |
           set -e
           if [ ! -f ios/Podfile ]; then
+            echo "No Podfile found. Recreating iOS platform..."
             rm -rf ios
             flutter create --platforms=ios .
           fi
@@ -39,6 +40,7 @@ workflows:
           else
             awk 'NR==1{print; print "use_frameworks! :linkage => :static"; next}1' "$PODFILE" > "$PODFILE.tmp" && mv "$PODFILE.tmp" "$PODFILE"
           fi
+          echo "=== Podfile ==="; head -n 20 "$PODFILE" || true
 
       - name: Reinstall CocoaPods cleanly
         script: |
@@ -49,15 +51,17 @@ workflows:
           pod install
           cd ..
 
-      - name: Xcode build (no signing) → .app
+      - name: Xcode build (no signing) → force output to ./build
         script: |
           set -e
+          # نبني ونفرض نواتج المترجم داخل مجلد ./build لسهولة الالتقاط
           xcodebuild \
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
             build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -65,22 +69,30 @@ workflows:
             DEVELOPMENT_TEAM="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
             IPHONEOS_DEPLOYMENT_TARGET=13.0
-          echo "=== Products ==="
-          ls -la build/Build/Products/Release-iphoneos || true
 
-      - name: Zip Runner.app
+          echo "=== Candidates under ./build ==="
+          find build -maxdepth 4 -type d -name "Runner.app" -print || true
+
+      - name: Collect Runner.app (zip for artifact)
         script: |
           set -e
+          # نحاول المسار القياسي أولاً
           APP_DIR="build/Build/Products/Release-iphoneos/Runner.app"
           if [ ! -d "$APP_DIR" ]; then
-            echo "Runner.app not found"; exit 1
+            # نبحث عن أي Runner.app ضمن ./build كخطة بديلة
+            APP_DIR=$(find build -type d -name "Runner.app" | head -n1 || true)
           fi
-          rm -f Runner.app.zip
+          if [ -z "$APP_DIR" ] || [ ! -d "$APP_DIR" ]; then
+            echo "Runner.app not found anywhere under ./build"
+            exit 1
+          fi
+          echo "Found: $APP_DIR"
           /usr/bin/zip -r -y Runner.app.zip "$APP_DIR"
 
     artifacts:
-      - Runner.app.zip         # ← ملف واحد واضح للتحميل
-      - build/Build/Products/Release-iphoneos/Runner.app
+      - Runner.app.zip                      # ملف واحد أكيد يظهر
+      - build/**/Runner.app                 # وكمان نعرض المجلد إن رغبت
+      - build/Build/Products/**             # لمراجعة أي نواتج إضافية
 
     publishing:
       email:
