@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-
 import 'home_screen.dart';
 import 'subscription_screen.dart';
 
@@ -13,60 +12,57 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-/// Splash متناسق مع native splash:
-/// - خلفية سودة (#000000) مثل إعداد flutter_native_splash.
-/// - اللوغو بالوسط تماماً.
-/// - فِيد إن → فِيد آوت (3 ثواني) + توهّج خفيف نابض بالخلفية.
-/// - نفحص الاشتراك بالتوازي؛ ننتقل بعد ما يكمّل الفيد وتجهز الوجهة.
+/// Splash سريع ومتناسق مع native splash:
+/// - خلفية سوداء.
+/// - اللوغو بالوسط.
+/// - فِيد دخول فقط (1 ثانية) + توهج خفيف.
+/// - ننتقل بمجرد: (مرور ثانية واحدة) && (تحديد الوجهة).
 class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
   // توهّج خفيف
   late final AnimationController _glowCtrl;
-  // فِيد 3 ثواني (0→1→0)
+
+  // فِيد دخول 1 ثانية (0→1)
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fade;
 
-  bool _fadeDone = false;
+  bool _minShowDone = false; // يضمن بقاء الشاشة 1 ثانية فقط كحد أدنى
   Widget? _navTarget;
 
   @override
   void initState() {
     super.initState();
 
-    // توهج بسيط نابض
+    // توهج بسيط نابض وسريع
     _glowCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
 
-    // فِيد (اختفاء/ظهور) لمدة 3 ثواني
+    // فِيد دخول 1 ثانية
     _fadeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 1),
     );
+    _fade = Tween<double>(begin: 0.0, end: 1.0)
+        .chain(CurveTween(curve: Curves.easeOutCubic))
+        .animate(_fadeCtrl);
+    _fadeCtrl.forward();
 
-    _fade = TweenSequence<double>([
-      // 0 → 1 (1.5 ثانية تقريباً)
-      TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 50,
-      ),
-      // 1 → 0 (1.5 ثانية تقريباً)
-      TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 50,
-      ),
-    ]).animate(_fadeCtrl);
-
-    _fadeCtrl.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _fadeDone = true;
-        _maybeNavigate();
-      }
+    // حد أدنى للعرض = 1 ثانية
+    Future.delayed(const Duration(seconds: 1), () {
+      _minShowDone = true;
+      _maybeNavigate();
     });
 
-    // ابدأ الأنيميشن والفحص سوية
-    _fadeCtrl.forward();
+    // حدد الوجهة بالتوازي
     _decideTarget();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // تحميل شعار السبلّاش مسبقاً لظهور فوري
+    precacheImage(const AssetImage('assets/images/logo.png'), context);
   }
 
   @override
@@ -88,7 +84,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       if (doc.exists) {
         final data = doc.data()!;
         final endAtTs = data['endAt'];
-        final endAt = (endAtTs is Timestamp) ? endAtTs.toDate() : now.subtract(const Duration(days: 1));
+        final endAt = (endAtTs is Timestamp)
+            ? endAtTs.toDate()
+            : now.subtract(const Duration(days: 1));
         final active = data['active'] == true;
 
         if (active && endAt.isAfter(now)) {
@@ -106,7 +104,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 
   void _maybeNavigate() {
-    if (!_fadeDone || _navTarget == null || !mounted) return;
+    if (!_minShowDone || _navTarget == null || !mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => _navTarget!),
@@ -128,7 +126,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     const bg = Color(0xFF000000); // نفس لون الـ native splash
-
     return Scaffold(
       backgroundColor: bg,
       body: Center( // ← يضمن تمركز كلشي بالنص
@@ -159,7 +156,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               },
             ),
 
-            // اللوغو: فِيد إن/آوت 3 ثواني
+            // اللوغو: فِيد دخول 1 ثانية
             FadeTransition(
               opacity: _fade,
               child: Image.asset(

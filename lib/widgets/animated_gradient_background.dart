@@ -1,10 +1,94 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui; // 👈 مهم حتى نستخدم ImageFilter
 import 'package:flutter/material.dart';
 
+/// خلفية عالمية ثابتة وخفيفة (بنفسجي → أسود) + توهّج خفيف من الزوايا.
+/// استخدمها داخل MaterialApp.builder:
+///
+/// builder: (context, child) => Stack(
+///   children: const [
+///     Positioned.fill(child: GlobalBackground()),
+///   ],
+/// )
+class GlobalBackground extends StatelessWidget {
+  const GlobalBackground({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const purple = Color(0xFF8A2BE2);
+    const black = Color(0xFF0E0E12);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // طبقة التدرّج الأساسية (ثابت)
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [purple, black],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        // توهّج خفيف من زاويتين (من دون بلور مكلف)
+        IgnorePointer(
+          child: CustomPaint(
+            painter: _CornerGlowPainter(color: purple.withOpacity(0.10)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CornerGlowPainter extends CustomPainter {
+  _CornerGlowPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..shader = const RadialGradient(
+        colors: [Color(0x338A2BE2), Colors.transparent],
+      ).createShader(Rect.fromCircle(center: Offset.zero, radius: 240));
+
+    // أعلى اليسار
+    canvas.save();
+    canvas.translate(0, 0);
+    canvas.drawCircle(const Offset(0, 0), 240, paint);
+    canvas.restore();
+
+    // أسفل اليمين
+    final paint2 = Paint()
+      ..shader = const RadialGradient(
+        colors: [Color(0x228A2BE2), Colors.transparent],
+      ).createShader(Rect.fromCircle(center: const Offset(0, 0), radius: 200));
+
+    canvas.save();
+    canvas.translate(size.width, size.height);
+    canvas.drawCircle(const Offset(0, 0), 200, paint2);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// نسخة متوافقة مع الكود القديم:
+/// - الافتراضي الآن "ثابت" (animated=false) → أداء خفيف.
+/// - لو أردت حركة خفيفة: مرّر animated:true (أنيميشن مخفّف).
 class AnimatedGradientBackground extends StatefulWidget {
   final Widget child;
-  const AnimatedGradientBackground({super.key, required this.child});
+  final bool animated;
+  final Duration duration;
+
+  const AnimatedGradientBackground({
+    super.key,
+    required this.child,
+    this.animated = false, // افتراضي: ثابت
+    this.duration = const Duration(seconds: 24),
+  });
 
   @override
   State<AnimatedGradientBackground> createState() =>
@@ -14,106 +98,85 @@ class AnimatedGradientBackground extends StatefulWidget {
 class _AnimatedGradientBackgroundState
     extends State<AnimatedGradientBackground>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
+  AnimationController? _c;
 
   @override
   void initState() {
     super.initState();
-    _c = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 18),
-    )..repeat();
+    if (widget.animated) {
+      _c = AnimationController(vsync: this, duration: widget.duration)..repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AnimatedGradientBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animated && _c == null) {
+      _c = AnimationController(vsync: this, duration: widget.duration)..repeat();
+    } else if (!widget.animated && _c != null) {
+      _c!.dispose();
+      _c = null;
+    }
   }
 
   @override
   void dispose() {
-    _c.dispose();
+    _c?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final base1 = cs.primary.withOpacity(0.16);
-    final base2 = cs.primary.withOpacity(0.10);
-    final glow = cs.primary.withOpacity(0.20);
+    if (_c == null) {
+      // ثابت (خفيف)
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          const GlobalBackground(),
+          widget.child,
+        ],
+      );
+    }
 
+    // أنيميشن خفيف (أخف من السابق: بدون Blur/طبقات ثقيلة)
     return AnimatedBuilder(
-      animation: _c,
+      animation: _c!,
       builder: (context, _) {
-        final t = _c.value;
+        final t = _c!.value;
         final angle = t * 2 * math.pi;
+
+        const purple = Color(0xFF8A2BE2);
+        const black = Color(0xFF0E0E12);
+
+        final glowCenter = Alignment(
+          math.cos(angle) * 0.15,
+          math.sin(angle) * 0.15,
+        );
 
         return Stack(
           fit: StackFit.expand,
           children: [
-            // خلفية Radial متحركة
+            // أساس ثابت
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [purple, black],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            // توهّج Radial يتحرك ببطء
             Container(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: Alignment(
-                    math.cos(angle) * 0.2,
-                    math.sin(angle) * 0.2,
-                  ),
-                  radius: 1.2,
-                  colors: [base1, Colors.transparent],
+                  center: glowCenter,
+                  radius: 1.0,
+                  colors: [purple.withOpacity(0.12), Colors.transparent],
                   stops: const [0.0, 1.0],
                 ),
               ),
             ),
-
-            // خلفية Linear متدرجة
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFF0E0E12),
-                    const Color(0xFF0E0E12),
-                    base2,
-                    const Color(0xFF0E0E12),
-                  ],
-                  stops: [
-                    0,
-                    t * 0.2,
-                    0.5 + 0.2 * math.sin(angle),
-                    1,
-                  ],
-                ),
-              ),
-            ),
-
-            // Sweep خفيف (glow)
-            IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: SweepGradient(
-                    center: Alignment.center,
-                    startAngle: 0,
-                    endAngle: 2 * math.pi,
-                    colors: [
-                      Colors.transparent,
-                      glow.withOpacity(0.08),
-                      Colors.transparent,
-                    ],
-                    stops: [
-                      (t + 0.05) % 1.0,
-                      (t + 0.1) % 1.0,
-                      (t + 0.15) % 1.0,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // Blur شفاف
-            BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 0.0, sigmaY: 0.0),
-              child: Container(color: Colors.transparent),
-            ),
-
-            // المحتوى
             widget.child,
           ],
         );

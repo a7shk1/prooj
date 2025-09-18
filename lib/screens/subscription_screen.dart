@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-
 import 'home_screen.dart';
 import 'admin_screen.dart';
 
@@ -60,6 +59,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       }, SetOptions(merge: true));
 
       _msg('تم تفعيل التجربة المجانية (7 أيام) ✅');
+
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -132,6 +132,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       }, SetOptions(merge: true));
 
       _msg('تم تفعيل الاشتراك ✅');
+
       if (!mounted) return;
       Navigator.pushReplacement(
         context,

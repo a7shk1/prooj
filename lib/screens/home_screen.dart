@@ -1,48 +1,36 @@
+// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
 
-import '../widgets/animated_gradient_background.dart';
-
-// شاشاتك الحالية
-import 'matches_screen.dart';
-import 'channels_screen.dart';
-import 'subscription_screen.dart';
-
-// الشاشات الجديدة
-import 'news_screen.dart';
-import 'videos_screen.dart';
-
-// 👇 استيراد القائمة الجانبية
+// شاشاتك
+import 'channels_screen.dart'; // ✅ باقية
+import 'matches_screen.dart'; // ✅ أضفناها
+import 'subscription_screen.dart'; // القائمة الجانبية
 import '../widgets/app_menu_drawer.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int index = 1; // نبدأ على القنوات مثل قبل
+  int index = 0; // نبدأ على القنوات
 
-  // ترتيب الصفحات: Matches / Channels / News / Videos / Me
+  // ترتيب الصفحات: Channels / Matches / Me
   final List<Widget> screens = const [
-    MatchesScreen(), // 0
-    ChannelsScreen(), // 1
-    NewsScreen(), // 2
-    VideosScreen(), // 3
-    AccountScreen(), // 4
+    ChannelsScreen(), // 0
+    MatchesScreen(), // 1
+    AccountScreen(), // 2
   ];
-
-  // ✨ متغير يتحكم بتبديل الألوان بالتناوب
-  bool toggleGradient = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: const AppMenuDrawer(),
-
       appBar: AppBar(
         automaticallyImplyLeading: false,
         centerTitle: false,
@@ -51,17 +39,11 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const DrawerButton(),
             const SizedBox(width: 6),
-            Image.asset(
-              'assets/images/logo.png',
-              height: 24,
-            ),
+            Image.asset('assets/images/logo.png', height: 24),
             const SizedBox(width: 8),
             const Text(
               'VAR IP TV',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -74,42 +56,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
               );
             },
-          )
+          ),
         ],
-
-        // ✨ خلفية متدرج متحركة
-        flexibleSpace: AnimatedContainer(
-          duration: const Duration(seconds: 4),
-          curve: Curves.easeInOut,
+        flexibleSpace: const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: toggleGradient
-                  ? const [
-                Color(0xFF6A11CB), // بنفسجي رايق
-                Color(0xFF2575FC), // أزرق فاتح
-              ]
-                  : const [
-                Color(0xFF8A2BE2), // بنفسجي غني
-                Color(0xFF1E1E2C), // رمادي/أسود متناسق
-              ],
+              colors: [Color(0xFF8A2BE2), Color(0xFF1E1E2C)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
-          onEnd: () {
-            setState(() {
-              toggleGradient = !toggleGradient;
-            });
-          },
         ),
         elevation: 8,
         backgroundColor: Colors.transparent,
       ),
-
-      body: AnimatedGradientBackground(
-        child: SafeArea(
-          child: IndexedStack(index: index, children: screens),
-        ),
+      body: SafeArea(
+        child: IndexedStack(index: index, children: screens),
       ),
       bottomNavigationBar: NavigationBar(
         height: 68,
@@ -117,24 +79,14 @@ class _HomeScreenState extends State<HomeScreen> {
         onDestinationSelected: (i) => setState(() => index = i),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.sports_soccer_outlined),
-            selectedIcon: Icon(Icons.sports_soccer),
-            label: 'Matches',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.live_tv_outlined),
             selectedIcon: Icon(Icons.live_tv),
             label: 'Channels',
           ),
           NavigationDestination(
-            icon: Icon(Icons.article_outlined),
-            selectedIcon: Icon(Icons.article),
-            label: 'News',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.video_library_outlined),
-            selectedIcon: Icon(Icons.video_library),
-            label: 'Videos',
+            icon: Icon(Icons.sports_soccer_outlined),
+            selectedIcon: Icon(Icons.sports_soccer),
+            label: 'Matches',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
@@ -147,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ================= شاشة الحساب / معلومات الاشتراك =================
+// ======= شاشة الحساب كما هي (بدون تغيير) =======
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
 
@@ -177,7 +129,6 @@ class _AccountScreenState extends State<AccountScreen> {
         .collection("subscriptions")
         .doc(deviceId)
         .get();
-
     if (mounted) {
       setState(() {
         _deviceId = deviceId;
@@ -212,8 +163,10 @@ class _AccountScreenState extends State<AccountScreen> {
           children: [
             const ListTile(
               leading: Icon(Icons.info, color: Colors.blue),
-              title: Text("معلومات الحساب",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              title: Text(
+                "معلومات الحساب",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
             ),
             const Divider(),
             ListTile(

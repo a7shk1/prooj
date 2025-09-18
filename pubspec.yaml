@@ -16,6 +16,10 @@ dependencies:
   firebase_core: ^3.15.2
   firebase_auth: ^5.7.0
   cloud_firestore: ^5.6.12
+  firebase_messaging: ^15.0.4          # ✅ إشعارات FCM
+
+  # إشعارات محلية للـ foreground
+  flutter_local_notifications: ^17.2.2  # ✅ لعرض الإشعار والتطبيق مفتوح
 
   # Device ID + Local cache
   device_info_plus: ^10.1.2
@@ -25,15 +29,8 @@ dependencies:
   http: ^1.2.0
   intl: ^0.19.0
 
-  # WebView لعرض جدول المباريات والأخبار
-  webview_flutter: ^4.8.0
-
-  # Local Notifications (إشعارات محلية للتذكير بالمباريات)
-  flutter_local_notifications: ^17.2.1
-  timezone: ^0.9.4
-
-  # Permissions (إذن التخزين + الإشعارات)
-  permission_handler: ^11.3.1
+  # لعرض صور الشعارات مع كاش
+  cached_network_image: ^3.3.1
 
   # لفتح الروابط الخارجية (VLC, MXPlayer, iOS Player)
   url_launcher: ^6.3.0
@@ -44,6 +41,10 @@ dependencies:
   # لفتح تطبيق أندرويد آخر (VAR Player)
   android_intent_plus: ^5.2.0
 
+  # (لا إشعارات / لا flutter_timezone / لا timezone هنا)
+  # Permission handler بقى لو تحتاجه لأشياء ثانية؛ احذفه لو ما تستخدمه:
+  permission_handler: ^11.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -53,9 +54,21 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
+    # شعار عام للتطبيق + مجلد الصور
     - assets/images/logo.png
     - assets/images/
+
+    # باقات القنوات (تأكد من أسماء المجلدات)
+    - assets/bein/
+    - assets/dazn/
+    - assets/espn/
+    - assets/mbc/
+    - assets/roshnleague/
+    - assets/premierleague/
+    - assets/generalsports/
+    - assets/SeriaA/   # إذا مجلدك اسمه "SERIA A" بمسافة، إمّا غيّره إلى SeriaA أو عدّل هنا إلى "assets/SERIA A/"
 
 # 👇 إعدادات أيقونة التطبيق
 flutter_icons:
@@ -68,12 +81,12 @@ flutter_icons:
 
 # 👇 إعدادات شاشة الإقلاع (Splash screen)
 flutter_native_splash:
-  color: "#000000"                 # خلفية سودة (نفس الثيم)
-  image: assets/images/logo.png    # اللوغو الجديد
+  color: "#000000"                 # خلفية سوده (نفس الثيم)
+  image: assets/images/logo.png    # اللوغو
   android: true
   ios: true
   web: false
-  android_gravity: center           # يثبّت اللوغو بالوسط على أندرويد
+  android_gravity: center           # تثبيت اللوغو بالوسط على أندرويد
   ios_content_mode: scaleAspectFit  # يمنع القص على iOS
   android_12:
     image: assets/images/logo.png

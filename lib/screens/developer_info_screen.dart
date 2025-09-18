@@ -5,28 +5,46 @@ class DeveloperInfoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('معلومات المطوّر')),
+      appBar: AppBar(
+        title: const Text('عن المطوّر'),
+        centerTitle: true,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: const Column(
+        padding: const EdgeInsets.all(20),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'أحمد خالد',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+            // العنوان
+            const Text(
+              'عين ستور',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
-              'ماجستير في الكيمياء',
-              style: TextStyle(fontSize: 16, color: Colors.white70),
+              'المطوّر الرسمي لتطبيق VAR IPTV',
+              style: TextStyle(
+                fontSize: 16,
+                color: cs.onSurface.withOpacity(.7),
+              ),
             ),
-            SizedBox(height: 16),
-            Text(
-              'مهتم ببناء تطبيقات عملية وسلسة تخلّي تجربة المستخدم أبسط وأسرع. '
-                  'أجمع بين الدقّة العلمية وحب البرمجة، وأحب كرة القدم وكل جديد في عالم التقنية. '
-                  'أطمح دائماً لتقديم حلول محترفة بواجهات أنيقة وأداء ثابت.',
-              style: TextStyle(height: 1.6),
+            const SizedBox(height: 20),
+
+            // الوصف
+            const Text(
+              'عين ستور هي صفحة مختصة بتطوير وتوفير تطبيقات عملية تخلي حياتك الرقمية أبسط وأسرع. '
+                  'تطبيق VAR IPTV هو واحد من مشاريعنا، صُمم ليقدّم تجربة مشاهدة أنيقة وسلسة مع تحديثات مباشرة للمباريات والقنوات. \n\n'
+                  'نهتم دائماً إنو يكون التطبيق ثابت، سريع، وبواجهة عصرية تحافظ على راحة المستخدم. '
+                  'مع VAR IPTV راح تلاگي المتعة والجودة بمكان واحد، وبأسلوب يلبّي احتياجاتك اليومية من البث المباشر.',
+              style: TextStyle(
+                fontSize: 15,
+                height: 1.6,
+              ),
             ),
           ],
         ),

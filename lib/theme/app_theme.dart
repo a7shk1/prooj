@@ -11,7 +11,7 @@ class AppTheme {
     seedColor: _seed,
     brightness: Brightness.dark,
     primary: _seed,
-    surface: _bg,
+    surface: _card,       // أسطح البطاقات
     background: _bg,
     onBackground: Colors.white,
     onSurface: Colors.white,
@@ -22,7 +22,9 @@ class AppTheme {
       brightness: Brightness.dark,
       useMaterial3: true,
       colorScheme: _darkScheme,
-      scaffoldBackgroundColor: _bg,
+
+      // 👇 مهم حتى تبين الخلفية العالمية وراء كل الشاشات
+      scaffoldBackgroundColor: Colors.transparent,
 
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -56,8 +58,9 @@ class AppTheme {
         }),
       ),
 
+      // 👇 خليه شفاف إذا بتستخدم Drawer بداخله Container بتدرّج
       drawerTheme: const DrawerThemeData(
-        backgroundColor: Color(0xFF131318),
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 8,
         shape: RoundedRectangleBorder(
@@ -68,7 +71,6 @@ class AppTheme {
         ),
       ),
 
-      // ✅ التعديل هنا: CardTheme -> CardThemeData
       cardTheme: CardThemeData(
         color: _card,
         elevation: 10,
@@ -103,10 +105,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 4,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
 
       pageTransitionsTheme: const PageTransitionsTheme(builders: {

@@ -9,24 +9,36 @@ class AppMenuDrawer extends StatelessWidget {
   static const String kTelegramChannelUrl = 'https://t.me/medplus2';
   static const String kTelegramUsername   = 'a7shk99'; // دردشة مباشرة تيليجرام
   static const String kWhatsAppNumber     = '+9647858689264';
-
-  static const String kInstagramUrl    = 'https://instagram.com/p_old';
+  static const String kInstagramUrl       = 'https://instagram.com/p_old';
 
   static const String kDevName  = 'أحمد خالد';
   static const String kDevEmail = 'ahmed.289ahmed@gmail.com';
 
   // ====== أدوات عامة ======
-  Future<void> _openExternal(String url) async {
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  Future<void> _openExternal(BuildContext context, String url) async {
+    try {
+      final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      if (!ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح الرابط')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح الرابط')),
+        );
+      }
+    }
   }
 
-  Future<void> _openWhatsAppChat() async {
+  Future<void> _openWhatsAppChat(BuildContext context) async {
     final phone = kWhatsAppNumber.replaceAll('+', '').replaceAll(' ', '');
-    await _openExternal('https://wa.me/$phone');
+    await _openExternal(context, 'https://wa.me/$phone');
   }
 
-  Future<void> _openTelegramChat() async {
-    await _openExternal('https://t.me/$kTelegramUsername');
+  Future<void> _openTelegramChat(BuildContext context) async {
+    await _openExternal(context, 'https://t.me/$kTelegramUsername');
   }
 
   Future<String> _getVersion() async {
@@ -59,7 +71,7 @@ class AppMenuDrawer extends StatelessWidget {
                   subtitle: const Text('@a7shk99'),
                   onTap: () {
                     Navigator.pop(context);
-                    _openTelegramChat();
+                    _openTelegramChat(context);
                   },
                 ),
                 ListTile(
@@ -68,7 +80,7 @@ class AppMenuDrawer extends StatelessWidget {
                   subtitle: const Text(kWhatsAppNumber),
                   onTap: () {
                     Navigator.pop(context);
-                    _openWhatsAppChat();
+                    _openWhatsAppChat(context);
                   },
                 ),
               ],
@@ -82,7 +94,7 @@ class AppMenuDrawer extends StatelessWidget {
   void _openAbout(BuildContext context) {
     showAboutDialog(
       context: context,
-      applicationName: 'Var IPTV',
+      applicationName: 'VAR IPTV',
       applicationVersion: '1.0.0',
       applicationIcon: const Icon(Icons.tv),
       children: const [
@@ -102,108 +114,115 @@ class AppMenuDrawer extends StatelessWidget {
     final textColor = Theme.of(context).colorScheme.onSurface;
 
     return Drawer(
-      child: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            // رأس القائمة
-            Container(
-              height: 120,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF121212), Color(0xFF1E1E1E)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: const Align(
+      elevation: 12,
+      child: Container(
+        // 🔒 خلفية تدرّج بنفسجي/أسود ثابتة (متناسقة مع الواجهة)
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1E1E2C), Color(0xFF6D28D9)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              // رأس القائمة: شعار + اسم التطبيق
+              Container(
+                height: 140,
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                 alignment: Alignment.bottomLeft,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text(
-                    'Var IPTV',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                child: Row(
+                  children: [
+                    Image.asset('assets/images/logo.png', height: 32),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'VAR IPTV',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: .2,
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-            ),
 
-            // دردشة مباشرة (من دون سطر تحت)
-            ListTile(
-              leading: const Icon(Icons.chat_bubble_outline),
-              title: const Text('دردشة مباشرة'),
-              onTap: () => _showDirectChatSheet(context),
-            ),
+              // دردشة مباشرة
+              ListTile(
+                leading: const Icon(Icons.chat_bubble_outline, color: Colors.white70),
+                title: const Text('دردشة مباشرة'),
+                onTap: () => _showDirectChatSheet(context),
+              ),
 
-            // قناة تيليجرام (بدون سب تايتل)
-            ListTile(
-              leading: const Icon(Icons.campaign_outlined),
-              title: const Text('قناتنا على تيليجرام'),
-              onTap: () => _openExternal(kTelegramChannelUrl),
-            ),
+              // قناة تيليجرام
+              ListTile(
+                leading: const Icon(Icons.campaign_outlined, color: Colors.white70),
+                title: const Text('قناتنا على تيليجرام'),
+                onTap: () => _openExternal(context, kTelegramChannelUrl),
+              ),
 
-            // إنستغرام — فقط نص “صفحتنا على إنستغرام”
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('صفحتنا على إنستغرام'),
-              onTap: () => _openExternal(kInstagramUrl),
-            ),
+              // إنستغرام
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined, color: Colors.white70),
+                title: const Text('صفحتنا على إنستغرام'),
+                onTap: () => _openExternal(context, kInstagramUrl),
+              ),
 
-            const Divider(),
+              const Divider(color: Colors.white24),
 
-            // نبذة عن التطبيق
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('نبذة عن التطبيق'),
-              onTap: () => _openAbout(context),
-            ),
+              // نبذة
+              ListTile(
+                leading: const Icon(Icons.info_outline, color: Colors.white70),
+                title: const Text('نبذة عن التطبيق'),
+                onTap: () => _openAbout(context),
+              ),
 
-            // سياسة الخصوصية
-            ListTile(
-              leading: const Icon(Icons.privacy_tip_outlined),
-              title: const Text('سياسة الخصوصية'),
-              onTap: () => Navigator.of(context).pushNamed('/privacy'),
-            ),
+              // سياسة الخصوصية
+              ListTile(
+                leading: const Icon(Icons.privacy_tip_outlined, color: Colors.white70),
+                title: const Text('سياسة الخصوصية'),
+                onTap: () => Navigator.of(context).pushNamed('/privacy'),
+              ),
 
-            // تواصل معنا
-            ListTile(
-              leading: const Icon(Icons.mail_outline),
-              title: const Text('تواصل معنا'),
-              onTap: () => Navigator.of(context).pushNamed('/contact'),
-            ),
+              // تواصل معنا
+              ListTile(
+                leading: const Icon(Icons.mail_outline, color: Colors.white70),
+                title: const Text('تواصل معنا'),
+                onTap: () => Navigator.of(context).pushNamed('/contact'),
+              ),
 
-            // معلومات المطوّر → شاشة مستقلة
-            ListTile(
-              leading: const Icon(Icons.person_outline),
-              title: const Text('معلومات المطوّر'),
-              onTap: () => Navigator.of(context).pushNamed('/developer'),
-            ),
+              // معلومات المطوّر
+              ListTile(
+                leading: const Icon(Icons.person_outline, color: Colors.white70),
+                title: const Text('معلومات المطوّر'),
+                onTap: () => Navigator.of(context).pushNamed('/developer'),
+              ),
 
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            // سطر الإصدار الحالي
-            FutureBuilder<String>(
-              future: _getVersion(),
-              builder: (context, snap) {
-                final version = snap.data ?? '';
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 4.0, bottom: 24.0),
-                    child: Text(
-                      version.isNotEmpty
-                          ? "الإصدار الحالي: $version"
-                          : "جارٍ التحقق من الإصدار...",
-                      style: TextStyle(color: textColor.withOpacity(0.6)),
+              // سطر الإصدار الحالي
+              FutureBuilder<String>(
+                future: _getVersion(),
+                builder: (context, snap) {
+                  final version = snap.data ?? '';
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4.0, bottom: 24.0),
+                      child: Text(
+                        version.isNotEmpty
+                            ? "الإصدار الحالي: $version"
+                            : "جارٍ التحقق من الإصدار...",
+                        style: TextStyle(color: textColor.withOpacity(0.7)),
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-          ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
