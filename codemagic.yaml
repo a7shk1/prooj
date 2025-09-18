@@ -1,27 +1,52 @@
 workflows:
-  ios-release-player:
-    name: iOS Release Build - Player
+  ios-release-app-only:
+    name: iOS Release - APP only (no signing)
     max_build_duration: 60
     instance_type: mac_mini_m2
 
     environment:
-      flutter: 3.35.4   # <-- يطابق Dart ^3.5.3
-      xcode: latest     # أو حدده إذا تحب (مثلاً 16.2)
+      flutter: 3.35.4      # يطابق Dart ^3.5.3
+      xcode: latest
 
     scripts:
-      - name: Flutter doctor
-        script: flutter doctor -v
+      - name: Doctor & deps
+        script: |
+          flutter doctor -v
+          flutter clean
+          flutter pub get
+          flutter precache --ios
 
-      - name: Get Flutter packages
-        script: flutter pub get
+      - name: Prepare CocoaPods
+        script: |
+          cd ios
+          pod repo update
+          pod install
+          cd ..
 
-      # نبني .app فقط بدون توقيع (ما يحتاج Development Team)
-      - name: Build iOS .app (unsigned)
-        script: flutter build ios --release --no-codesign
+      # ⬇️ بناء Release لجهاز حقيقي بدون توقيع — نأخذ .app من مجلد Products
+      - name: Xcode build (no signing) → .app
+        script: |
+          set -e
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            IPHONEOS_DEPLOYMENT_TARGET=13.0
 
-    # نطلع Runner.app كأرتيفاكت، وإنت تكبسه يدويًا لاحقًا
+          echo "Listing build products:"
+          ls -R build/Build/Products || true
+
     artifacts:
-      - build/ios/iphoneos/Runner.app
+      # هذا هو مسار .app الناتج من خطوة build أعلاه
+      - build/Build/Products/Release-iphoneos/Runner.app
 
     publishing:
       email:
