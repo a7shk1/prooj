@@ -17,7 +17,7 @@ workflows:
           flutter pub get
           flutter precache --ios
 
-      # 👇 إذا ماكو ios/Podfile، نخلي Flutter يعيد إنشاء منصة iOS بالكامل
+      # لو ماكو iOS، نولده رسميًا
       - name: Ensure iOS platform (auto-create if missing)
         script: |
           set -e
@@ -27,6 +27,29 @@ workflows:
             flutter create --platforms=ios .
           fi
           ls -la ios || true
+
+      # ✅ هنا نعدّل Podfile: منصة iOS = 13.0 + use_frameworks static
+      - name: Patch Podfile (platform 13 + use_frameworks static)
+        script: |
+          set -e
+          PODFILE="ios/Podfile"
+          # اضبط platform :ios, '13.0'
+          if grep -q "^platform :ios" "$PODFILE"; then
+            # macOS sed
+            sed -i '' -e "s/^platform :ios.*/platform :ios, '13.0'/" "$PODFILE"
+          else
+            # أدرج السطر في أعلى الملف
+            printf "platform :ios, '13.0'\n%s" "$(cat "$PODFILE")" > "$PODFILE"
+          fi
+          # اضبط use_frameworks! :linkage => :static
+          if grep -q "^use_frameworks!" "$PODFILE"; then
+            sed -i '' -e "s/^use_frameworks!.*/use_frameworks! :linkage => :static/" "$PODFILE"
+          else
+            # أدرجه بعد أول سطر
+            awk 'NR==1{print; print "use_frameworks! :linkage => :static"; next}1' "$PODFILE" > "$PODFILE.tmp" && mv "$PODFILE.tmp" "$PODFILE"
+          fi
+          echo "=== Podfile after patch ==="
+          cat "$PODFILE"
 
       - name: Reinstall CocoaPods cleanly
         script: |
