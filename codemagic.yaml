@@ -5,16 +5,42 @@ workflows:
     instance_type: mac_mini_m2
 
     environment:
-      flutter: 3.35.4
+      flutter: 3.35.4   # Dart >=3.5.3
       xcode: latest
 
     scripts:
       - name: Doctor & deps
         script: |
+          set -e
           flutter doctor -v
           flutter clean
           flutter pub get
           flutter precache --ios
+
+      - name: Ensure Podfile (create if missing)
+        script: |
+          set -e
+          if [ ! -f ios/Podfile ]; then
+            cat > ios/Podfile <<'EOF'
+platform :ios, '13.0'
+use_frameworks! :linkage => :static
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+flutter_root = ENV['FLUTTER_ROOT']
+load File.join(flutter_root, 'packages', 'flutter_tools', 'bin', 'podhelper.rb')
+target 'Runner' do
+  flutter_ios_podfile_setup
+  use_native_modules!
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+end
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
+end
+EOF
+          fi
+          echo "Using Podfile:"
+          cat ios/Podfile
 
       - name: Reinstall CocoaPods cleanly
         script: |
@@ -41,7 +67,6 @@ workflows:
             DEVELOPMENT_TEAM="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
             IPHONEOS_DEPLOYMENT_TARGET=13.0
-
           echo "Products:"
           ls -R build/Build/Products || true
 
