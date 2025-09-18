@@ -5,7 +5,7 @@ workflows:
     instance_type: mac_mini_m2
 
     environment:
-      flutter: 3.35.4   # Dart >=3.5.3
+      flutter: 3.35.4   # Dart >= 3.5.3
       xcode: latest
 
     scripts:
@@ -17,30 +17,16 @@ workflows:
           flutter pub get
           flutter precache --ios
 
-      - name: Ensure Podfile (create if missing)
+      # 👇 إذا ماكو ios/Podfile، نخلي Flutter يعيد إنشاء منصة iOS بالكامل
+      - name: Ensure iOS platform (auto-create if missing)
         script: |
           set -e
           if [ ! -f ios/Podfile ]; then
-            mkdir -p ios
-            printf "%s\n" \
-"platform :ios, '13.0'
-use_frameworks! :linkage => :static
-ENV['COCOAPODS_DISABLE_STATS'] = 'true'
-flutter_root = ENV['FLUTTER_ROOT']
-load File.join(flutter_root, 'packages', 'flutter_tools', 'bin', 'podhelper.rb')
-target 'Runner' do
-  flutter_ios_podfile_setup
-  use_native_modules!
-  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-end
-post_install do |installer|
-  installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
-  end
-end" > ios/Podfile
+            echo "No Podfile found. Recreating iOS platform..."
+            rm -rf ios
+            flutter create --platforms=ios .
           fi
-          echo "=== Podfile ==="
-          cat ios/Podfile
+          ls -la ios || true
 
       - name: Reinstall CocoaPods cleanly
         script: |
@@ -51,6 +37,7 @@ end" > ios/Podfile
           pod install
           cd ..
 
+      # ⬇️ Build .app فقط بدون أي توقيع
       - name: Xcode build (no signing) → .app
         script: |
           set -e
