@@ -5,39 +5,22 @@ workflows:
     instance_type: mac_mini_m2
 
     environment:
-      flutter: 3.22.2   # ثبّت نسخة تناسبك (مو latest لتجنب تغييرات مفاجئة)
-      xcode: 15.4
+      flutter: 3.35.4   # <-- يطابق Dart ^3.5.3
+      xcode: latest     # أو حدده إذا تحب (مثلاً 16.2)
 
     scripts:
-      - name: Precache iOS
-        script: flutter precache --ios
       - name: Flutter doctor
         script: flutter doctor -v
+
       - name: Get Flutter packages
         script: flutter pub get
 
-      # 👇 نبني .app فقط بدون توقيع (نتجنب مرحلة export اللي تطلب Development Team)
+      # نبني .app فقط بدون توقيع (ما يحتاج Development Team)
       - name: Build iOS .app (unsigned)
         script: flutter build ios --release --no-codesign
 
-      # 👇 نحوله يدويًا إلى .ipa
-      - name: Package .app into .ipa
-        script: |
-          set -e
-          APP_PATH="build/ios/iphoneos/Runner.app"
-          if [ ! -d "$APP_PATH" ]; then
-            echo "Runner.app not found at $APP_PATH"
-            exit 1
-          fi
-          rm -rf Payload
-          mkdir -p Payload
-          cp -R "$APP_PATH" Payload/Runner.app
-          /usr/bin/zip -r -y Runner.zip Payload
-          mv Runner.zip Runner.ipa
-          echo "Created Runner.ipa"
-
+    # نطلع Runner.app كأرتيفاكت، وإنت تكبسه يدويًا لاحقًا
     artifacts:
-      - Runner.ipa
       - build/ios/iphoneos/Runner.app
 
     publishing:
