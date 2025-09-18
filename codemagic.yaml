@@ -5,7 +5,7 @@ workflows:
     instance_type: mac_mini_m2
 
     environment:
-      flutter: 3.35.4   # Dart >= 3.5.3
+      flutter: 3.35.4
       xcode: latest
 
     scripts:
@@ -17,39 +17,28 @@ workflows:
           flutter pub get
           flutter precache --ios
 
-      # لو ماكو iOS، نولده رسميًا
       - name: Ensure iOS platform (auto-create if missing)
         script: |
           set -e
           if [ ! -f ios/Podfile ]; then
-            echo "No Podfile found. Recreating iOS platform..."
             rm -rf ios
             flutter create --platforms=ios .
           fi
-          ls -la ios || true
 
-      # ✅ هنا نعدّل Podfile: منصة iOS = 13.0 + use_frameworks static
       - name: Patch Podfile (platform 13 + use_frameworks static)
         script: |
           set -e
           PODFILE="ios/Podfile"
-          # اضبط platform :ios, '13.0'
           if grep -q "^platform :ios" "$PODFILE"; then
-            # macOS sed
             sed -i '' -e "s/^platform :ios.*/platform :ios, '13.0'/" "$PODFILE"
           else
-            # أدرج السطر في أعلى الملف
             printf "platform :ios, '13.0'\n%s" "$(cat "$PODFILE")" > "$PODFILE"
           fi
-          # اضبط use_frameworks! :linkage => :static
           if grep -q "^use_frameworks!" "$PODFILE"; then
             sed -i '' -e "s/^use_frameworks!.*/use_frameworks! :linkage => :static/" "$PODFILE"
           else
-            # أدرجه بعد أول سطر
             awk 'NR==1{print; print "use_frameworks! :linkage => :static"; next}1' "$PODFILE" > "$PODFILE.tmp" && mv "$PODFILE.tmp" "$PODFILE"
           fi
-          echo "=== Podfile after patch ==="
-          cat "$PODFILE"
 
       - name: Reinstall CocoaPods cleanly
         script: |
@@ -60,7 +49,6 @@ workflows:
           pod install
           cd ..
 
-      # ⬇️ Build .app فقط بدون أي توقيع
       - name: Xcode build (no signing) → .app
         script: |
           set -e
@@ -77,10 +65,21 @@ workflows:
             DEVELOPMENT_TEAM="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
             IPHONEOS_DEPLOYMENT_TARGET=13.0
-          echo "=== Build Products ==="
-          ls -R build/Build/Products || true
+          echo "=== Products ==="
+          ls -la build/Build/Products/Release-iphoneos || true
+
+      - name: Zip Runner.app
+        script: |
+          set -e
+          APP_DIR="build/Build/Products/Release-iphoneos/Runner.app"
+          if [ ! -d "$APP_DIR" ]; then
+            echo "Runner.app not found"; exit 1
+          fi
+          rm -f Runner.app.zip
+          /usr/bin/zip -r -y Runner.app.zip "$APP_DIR"
 
     artifacts:
+      - Runner.app.zip         # ← ملف واحد واضح للتحميل
       - build/Build/Products/Release-iphoneos/Runner.app
 
     publishing:
