@@ -9,18 +9,19 @@ workflows:
       xcode: latest
 
     scripts:
-      - name: Get Flutter packages
-        script: flutter pub get
+      - name: Clean & get packages
+        script: |
+          flutter clean
+          flutter pub get
 
-      - name: Build iOS IPA
-        script: flutter build ipa --release --no-codesign
+      - name: Build IPA (no codesign)
+        script: |
+          flutter build ipa --release --no-codesign
+          echo "=== LIST build/ios ==="
+          ls -la build/ios || true
+          echo "=== LIST build/ios/ipa ==="
+          ls -la build/ios/ipa || true
 
     artifacts:
       - build/ios/ipa/*.ipa
-      - build/ios/ipa/*.app
       - build/ios/archive/*.xcarchive
-
-    publishing:
-      email:
-        recipients:
-          - ahmed.289ahmed@gmail.com
