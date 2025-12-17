@@ -14,14 +14,14 @@ workflows:
           flutter clean
           flutter pub get
 
-      - name: Build IPA (no codesign)
+      - name: Build IPA (no codesign) + verify output
         script: |
           flutter build ipa --release --no-codesign
-          echo "=== LIST build/ios ==="
-          ls -la build/ios || true
+          echo "=== FIND IPA ==="
+          find build -maxdepth 5 -type f -name "*.ipa" -print || true
           echo "=== LIST build/ios/ipa ==="
           ls -la build/ios/ipa || true
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/**/ipa/*.ipa
       - build/ios/archive/*.xcarchive
