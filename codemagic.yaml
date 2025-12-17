@@ -1,6 +1,6 @@
 workflows:
   ios-release:
-    name: iOS Release Build
+    name: iOS Release Build (Unsigned IPA)
     max_build_duration: 60
     instance_type: mac_mini_m2
 
@@ -14,14 +14,39 @@ workflows:
           flutter clean
           flutter pub get
 
-      - name: Build IPA (no codesign) + verify output
+      # يبني Archive (بدون signing)
+      - name: Build iOS archive (no codesign)
         script: |
-          flutter build ipa --release --no-codesign
-          echo "=== FIND IPA ==="
-          find build -maxdepth 5 -type f -name "*.ipa" -print || true
-          echo "=== LIST build/ios/ipa ==="
-          ls -la build/ios/ipa || true
+          flutter build ios --release --no-codesign
+
+      # يحوّل Runner.app داخل الـ xcarchive إلى IPA unsigned (Payload)
+      - name: Package unsigned IPA from xcarchive
+        script: |
+          set -e
+          ARCHIVE="build/ios/archive/Runner.xcarchive"
+          APP="$ARCHIVE/Products/Applications/Runner.app"
+
+          echo "Checking archive exists..."
+          ls -la build/ios/archive || true
+
+          echo "Checking app exists..."
+          ls -la "$APP" || true
+
+          # فحص سريع للـ flutter_assets (حتى نعرف سبب الشاشة السودة)
+          echo "Checking flutter assets..."
+          ls -la "$APP/Frameworks/App.framework/flutter_assets" | head -n 5 || true
+
+          mkdir -p build/ios/unsigned/Payload
+          cp -R "$APP" build/ios/unsigned/Payload/
+
+          cd build/ios/unsigned
+          /usr/bin/zip -r VarIPTV_unsigned.ipa Payload
 
     artifacts:
-      - build/**/ipa/*.ipa
+      - build/ios/unsigned/*.ipa
       - build/ios/archive/*.xcarchive
+
+    publishing:
+      email:
+        recipients:
+          - ahmed.289ahmed@gmail.com
