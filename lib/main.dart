@@ -1,18 +1,18 @@
 // lib/main.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'firebase_options.dart';
 import 'services/notifications_service.dart';
-import 'services/subscription_service.dart';
 
 import 'screens/splash_screen.dart';
 import 'screens/privacy_policy_screen.dart';
 import 'screens/contact_screen.dart';
 import 'screens/developer_info_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/subscription_screen.dart';
 
 import 'theme/app_theme.dart';
 import 'widgets/animated_gradient_background.dart';
@@ -22,51 +22,58 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // شغّل الواجهة فوراً (حتى لو Firebase علگ)
+  // شغّل الواجهة فوراً
   runApp(const VarApp());
 
-  // الباقي نخليه بالخلفية بدون ما يوقف الرسم
-  _initAsync();
+  // سوّي التهيئة بالخلفية بدون ما توقف التطبيق على شاشة سودة
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(_postStartInit());
+  });
 }
 
-Future<void> _initAsync() async {
-  // 1) Firebase (timeout حتى ما يعلق)
+Future<void> _postStartInit() async {
+  // 1) Firebase init (بـ timeout حتى ما يعلّگ)
+  bool firebaseOk = false;
   try {
-    await Firebase.initializeApp().timeout(const Duration(seconds: 5));
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(const Duration(seconds: 8));
+    firebaseOk = true;
+  } catch (_) {
+    firebaseOk = false;
+  }
+
+  if (!firebaseOk) return;
+
+  // 2) Background message handler (بعد Firebase)
+  try {
     FirebaseMessaging.onBackgroundMessage(
       NotificationsService.firebaseMessagingBackgroundHandler,
     );
-  } catch (_) {
-    // إذا فشل Firebase/علگ: نكمل، بس ميزات Firebase ممكن ما تشتغل
-  }
-
-  // 2) تسجيل دخول مجهول + إشعارات (كلها محمية)
-  try {
-    await FirebaseAuth.instance.signInAnonymously().timeout(const Duration(seconds: 5));
   } catch (_) {}
 
+  // 3) Auth + Notifications (لا تخليها تمنع فتح الواجهة)
   try {
-    await NotificationsService.init();
-    await NotificationsService.requestPermission();
-    await NotificationsService.subscribeToMatchesTopic();
-    await NotificationsService.getToken();
+    await FirebaseAuth.instance.signInAnonymously()
+        .timeout(const Duration(seconds: 8));
   } catch (_) {}
 
-  // 3) توجيه حسب الاشتراك
+  // خلي الإشعارات غير حاجزة (حتى لو iOS ما يقبل Push بالسيدلود)
+  unawaited(_initNotificationsSafely());
+}
+
+Future<void> _initNotificationsSafely() async {
   try {
-    final hasAccess = await SubscriptionService.hasActiveAccess()
+    await NotificationsService.init()
         .timeout(const Duration(seconds: 6));
-
-    final nav = navigatorKey.currentState;
-    if (nav == null) return;
-
-    if (hasAccess) {
-      nav.pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
-    } else {
-      nav.pushReplacement(MaterialPageRoute(builder: (_) => const SubscriptionScreen()));
-    }
+    await NotificationsService.requestPermission()
+        .timeout(const Duration(seconds: 6));
+    await NotificationsService.subscribeToMatchesTopic()
+        .timeout(const Duration(seconds: 6));
+    await NotificationsService.getToken()
+        .timeout(const Duration(seconds: 6));
   } catch (_) {
-    // إذا فشل الفحص: خلي المستخدم يكمل على السبلّاش/Subscription لاحقاً
+    // حتى لو فشلت، ما نوقف التطبيق
   }
 }
 
