@@ -1,4 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'home_screen.dart';
+import 'subscription_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -7,43 +12,36 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-/// Splash مرسوم دائماً (حتى لو Firebase تعلّق)
-/// - خلفية سوداء
-/// - لوغو وسط
-/// - توهّج خفيف + فِيد
-/// - ما يسوي أي Firestore/DeviceInfo هنا
-/// التوجيه يصير من main.dart عبر navigatorKey
 class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
   late final AnimationController _glowCtrl;
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fade;
 
-  bool _fallbackShown = false;
+  bool _minShowDone = false;
+  bool _navigated = false;
+
+  // افتراضي: لا تظل واقف
+  Widget _navTarget = const SubscriptionScreen();
 
   @override
   void initState() {
     super.initState();
 
-    _glowCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
+    _glowCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+      ..repeat(reverse: true);
 
-    _fadeCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    );
+    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 1));
     _fade = Tween<double>(begin: 0.0, end: 1.0)
         .chain(CurveTween(curve: Curves.easeOutCubic))
         .animate(_fadeCtrl);
-
     _fadeCtrl.forward();
 
-    // فاليباك UI إذا ما صار أي تنقّل (مثلاً Firebase علق/لا نت)
-    Future.delayed(const Duration(seconds: 12), () {
-      if (!mounted) return;
-      setState(() => _fallbackShown = true);
+    Future.delayed(const Duration(seconds: 1), () {
+      _minShowDone = true;
+      _maybeNavigate();
     });
+
+    _decideTarget();
   }
 
   @override
@@ -59,10 +57,62 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     super.dispose();
   }
 
+  Future<void> _decideTarget() async {
+    try {
+      final deviceId = await _getDeviceId().timeout(const Duration(seconds: 3));
+
+      final doc = await FirebaseFirestore.instance
+          .collection('subscriptions')
+          .doc(deviceId)
+          .get()
+          .timeout(const Duration(seconds: 5));
+
+      final now = DateTime.now();
+      if (doc.exists) {
+        final data = doc.data()!;
+        final endAtTs = data['endAt'];
+        final endAt = (endAtTs is Timestamp) ? endAtTs.toDate() : now.subtract(const Duration(days: 1));
+        final active = data['active'] == true;
+
+        _navTarget = (active && endAt.isAfter(now))
+            ? const HomeScreen()
+            : const SubscriptionScreen();
+      } else {
+        _navTarget = const SubscriptionScreen();
+      }
+    } catch (_) {
+      _navTarget = const SubscriptionScreen();
+    }
+
+    _maybeNavigate();
+  }
+
+  void _maybeNavigate() {
+    if (!mounted || _navigated) return;
+    if (!_minShowDone) return;
+
+    _navigated = true;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => _navTarget),
+    );
+  }
+
+  Future<String> _getDeviceId() async {
+    final info = DeviceInfoPlugin();
+    if (Platform.isAndroid) {
+      final a = await info.androidInfo;
+      return a.id;
+    } else if (Platform.isIOS) {
+      final i = await info.iosInfo;
+      return i.identifierForVendor ?? 'unknown_ios';
+    }
+    return 'unknown_device';
+  }
+
   @override
   Widget build(BuildContext context) {
     const bg = Color(0xFF000000);
-
     return Scaffold(
       backgroundColor: bg,
       body: Center(
@@ -91,30 +141,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                 );
               },
             ),
-
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FadeTransition(
-                  opacity: _fade,
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    width: 160,
-                    height: 160,
-                    filterQuality: FilterQuality.high,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (_fallbackShown)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24),
-                    child: Text(
-                      'إذا طول التحميل، تأكد من الإنترنت أو أعد فتح التطبيق.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                  ),
-              ],
+            FadeTransition(
+              opacity: _fade,
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 160,
+                height: 160,
+                filterQuality: FilterQuality.high,
+              ),
             ),
           ],
         ),
