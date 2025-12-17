@@ -1,14 +1,12 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'dart:io';
 
-// شاشاتك
-import 'channels_screen.dart'; // ✅ باقية
-import 'matches_screen.dart'; // ✅ أضفناها
-import 'subscription_screen.dart'; // القائمة الجانبية
+import 'channels_screen.dart';
+import 'matches_screen.dart';
+import 'subscription_screen.dart';
 import '../widgets/app_menu_drawer.dart';
+import '../services/subscription_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,13 +16,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int index = 0; // نبدأ على القنوات
+  int index = 0; // البدء على القنوات بشكل افتراضي
 
-  // ترتيب الصفحات: Channels / Matches / Me
   final List<Widget> screens = const [
-    ChannelsScreen(), // 0
-    MatchesScreen(), // 1
-    AccountScreen(), // 2
+    ChannelsScreen(),
+    MatchesScreen(),
+    AccountScreen(), // Me
   ];
 
   @override
@@ -99,7 +96,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ======= شاشة الحساب كما هي (بدون تغيير) =======
+/// =====================
+/// تبويب "Me"
+/// =====================
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
 
@@ -108,31 +107,55 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
-  String _deviceId = "loading...";
-  Map<String, dynamic>? _subscription;
+  bool _loading = true;
+  String _deviceId = 'غير مُعرّف';
+  Map<String, dynamic>? _sub; // بيانات الاشتراك النشط (إن وُجد)
+  String? _error; // رسالة ودّية عند غياب الاشتراك/الربط
 
-  Future<String> _getDeviceId() async {
-    final info = DeviceInfoPlugin();
-    if (Platform.isAndroid) {
-      final a = await info.androidInfo;
-      return a.id;
-    } else if (Platform.isIOS) {
-      final i = await info.iosInfo;
-      return i.identifierForVendor ?? 'unknown_ios';
-    }
-    return 'unknown_device';
-  }
+  Future<void> _load() async {
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+      _deviceId = 'غير مُعرّف';
+      _sub = null;
+    });
 
-  Future<void> _loadData() async {
-    final deviceId = await _getDeviceId();
-    final snap = await FirebaseFirestore.instance
-        .collection("subscriptions")
-        .doc(deviceId)
-        .get();
-    if (mounted) {
+    try {
+      // 1) جلب الـ deviceId الحقيقي المرتبط في مجموعة devices
+      final resolved = await SubscriptionService.getResolvedDeviceId();
+
+      if (resolved == null || resolved.isEmpty) {
+        // لا يوجد ربط لهذا الجهاز حتى الآن
+        if (!mounted) return;
+        setState(() {
+          _deviceId = 'غير مُعرّف';
+          _loading = false;
+          _error =
+          'لا يوجد ربط لهذا الجهاز ضمن الاشتراكات.\n'
+              'فعِّل تجربة مجانية أو كود مدفوع مرة واحدة ليتم إنشاء الربط تلقائياً.';
+        });
+        return;
+      }
+
+      // 2) جلب الاشتراك النشط لهذا الجهاز فقط
+      final subDoc =
+      await SubscriptionService.getActiveSubscriptionByDeviceId(resolved);
+
+      if (!mounted) return;
       setState(() {
-        _deviceId = deviceId;
-        _subscription = snap.data();
+        _deviceId = resolved;
+        _sub = subDoc?.data();
+        _loading = false;
+        if (_sub == null) {
+          _error = 'لا يوجد اشتراك نشط لهذا الجهاز حالياً.';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'حدث خطأ أثناء جلب البيانات.';
       });
     }
   }
@@ -140,20 +163,20 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _load();
+  }
+
+  String _typeLabel(String? t) {
+    if (t == 'paid') return 'مدفوع';
+    if (t == 'trial') return 'مجاني (تجربة)';
+    return 'غير معروف';
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_subscription == null) {
+    if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
-
-    final type = _subscription?['type'] ?? 'unknown';
-    final endAt = (_subscription?['endAt'] as Timestamp?)?.toDate();
-    final name = _subscription?['name'] ?? '';
-    final remaining =
-    endAt != null ? endAt.difference(DateTime.now()).inDays : null;
 
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -174,31 +197,49 @@ class _AccountScreenState extends State<AccountScreen> {
               title: const Text("معرّف الجهاز"),
               subtitle: Text(_deviceId),
             ),
-            ListTile(
-              leading: const Icon(Icons.workspace_premium),
-              title: const Text("نوع الاشتراك"),
-              subtitle: Text(
-                type == "trial"
-                    ? "مجاني (تجربة)"
-                    : type == "paid"
-                    ? "مدفوع"
-                    : "غير معروف",
+            if (_sub == null) ...[
+              const SizedBox(height: 12),
+              const ListTile(
+                leading: Icon(Icons.warning, color: Colors.orange),
+                title: Text("لا يوجد اشتراك نشط"),
+                subtitle: Text("يبدو أنه لا يوجد لديك اشتراك صالح حالياً."),
               ),
-            ),
-            if (endAt != null)
-              ListTile(
-                leading: const Icon(Icons.timer),
-                title: const Text("ينتهي في"),
-                subtitle: Text(
-                  "${endAt.toLocal()} (${remaining != null ? "$remaining يوم متبقي" : ""})",
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: _load,
+                child: const Text('إعادة التحقق من الاشتراك'),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  style: const TextStyle(fontSize: 12, color: Colors.white70),
                 ),
-              ),
-            if (type == "paid" && name.isNotEmpty)
+              ],
+            ] else ...[
               ListTile(
-                leading: const Icon(Icons.person),
-                title: const Text("اسم المشترك"),
-                subtitle: Text(name),
+                leading: const Icon(Icons.workspace_premium),
+                title: const Text("نوع الاشتراك"),
+                subtitle: Text(_typeLabel(_sub!['type'] as String?)),
               ),
+              if (_sub!['endAt'] is Timestamp)
+                ListTile(
+                  leading: const Icon(Icons.timer),
+                  title: const Text("ينتهي في"),
+                  subtitle: Builder(
+                    builder: (_) {
+                      final end = (_sub!['endAt'] as Timestamp).toDate();
+                      final remain = end.difference(DateTime.now()).inDays;
+                      return Text("${end.toLocal()} (${remain} يوم متبقٍ)");
+                    },
+                  ),
+                ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: _load,
+                child: const Text('تحديث الحالة'),
+              ),
+            ],
           ],
         ),
       ),

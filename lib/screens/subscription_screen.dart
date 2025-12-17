@@ -1,7 +1,6 @@
-import 'dart:io';
+// lib/screens/subscription_screen.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:device_info_plus/device_info_plus.dart';
+import '../services/subscription_service.dart';
 import 'home_screen.dart';
 import 'admin_screen.dart';
 
@@ -17,49 +16,22 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   bool _loading = false;
   int _tapCount = 0;
 
-  Future<String> _getDeviceId() async {
-    final info = DeviceInfoPlugin();
-    if (Platform.isAndroid) {
-      final a = await info.androidInfo;
-      return a.id;
-    } else if (Platform.isIOS) {
-      final i = await info.iosInfo;
-      return i.identifierForVendor ?? 'unknown_ios';
-    }
-    return 'unknown_device';
+  void _msg(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(text)),
+    );
   }
-
-  void _msg(String text) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _startTrial() async {
     setState(() => _loading = true);
     try {
-      final deviceId = await _getDeviceId();
-      final subRef =
-      FirebaseFirestore.instance.collection('subscriptions').doc(deviceId);
-      final snap = await subRef.get();
-
-      if (snap.exists && (snap.data()?['type'] == 'trial')) {
-        _msg('انت مستخدم التجربة المجانية سابقًا!');
+      final err = await SubscriptionService.startTrialOnce();
+      if (err != null) {
+        _msg(err);
         return;
       }
-
-      final now = DateTime.now();
-      final end = now.add(const Duration(days: 7));
-
-      await subRef.set({
-        'deviceId': deviceId,
-        'type': 'trial',
-        'startAt': Timestamp.fromDate(now),
-        'endAt': Timestamp.fromDate(end),
-        'active': true,
-        'name': '',
-        'notes': 'Free trial',
-      }, SetOptions(merge: true));
-
       _msg('تم تفعيل التجربة المجانية (7 أيام) ✅');
-
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -78,61 +50,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       _msg('اكتب الكود أولاً');
       return;
     }
-
     setState(() => _loading = true);
     try {
-      final deviceId = await _getDeviceId();
-      final codeRef =
-      FirebaseFirestore.instance.collection('codes').doc(code);
-      final codeSnap = await codeRef.get();
-
-      if (!codeSnap.exists) {
-        _msg('الكود غير موجود ❌');
+      final err = await SubscriptionService.activateWithCode(code: code);
+      if (err != null) {
+        _msg(err);
         return;
       }
-
-      final data = codeSnap.data()!;
-      final active = data['active'] == true;
-      final used = data['used'] == true;
-      final bound = (data['boundDeviceId'] as String?);
-
-      if (used && bound != null && bound != deviceId) {
-        _msg('الكود مستخدم على جهاز آخر ❌');
-        return;
-      }
-      if (!active) {
-        _msg('الكود غير مفعل ❌');
-        return;
-      }
-
-      final days =
-      (data['durationDays'] is int) ? data['durationDays'] as int : 30;
-
-      final now = DateTime.now();
-      final end = now.add(Duration(days: days));
-
-      await FirebaseFirestore.instance
-          .collection('subscriptions')
-          .doc(deviceId)
-          .set({
-        'deviceId': deviceId,
-        'type': 'paid',
-        'code': code,
-        'startAt': Timestamp.fromDate(now),
-        'endAt': Timestamp.fromDate(end),
-        'active': true,
-        'name': '',
-        'notes': '',
-      }, SetOptions(merge: true));
-
-      await codeRef.set({
-        'used': true,
-        'boundDeviceId': deviceId,
-        'active': true,
-      }, SetOptions(merge: true));
-
       _msg('تم تفعيل الاشتراك ✅');
-
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -149,6 +74,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     _tapCount++;
     if (_tapCount >= 5) {
       _tapCount = 0;
+      if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const AdminScreen()),
@@ -165,10 +91,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('الاشتراكات'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('الاشتراكات'), centerTitle: true),
       body: Center(
         child: _loading
             ? const CircularProgressIndicator()
@@ -179,10 +102,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             children: [
               GestureDetector(
                 onTap: _onLogoTap,
-                child: Image.asset(
-                  'assets/images/logo.png',
-                  height: 100,
-                ),
+                child: Image.asset('assets/images/logo.png', height: 100),
               ),
               const SizedBox(height: 30),
               SizedBox(

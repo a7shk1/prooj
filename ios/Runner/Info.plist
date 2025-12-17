@@ -86,10 +86,20 @@
 		</dict>
 	</array>
 
-	<!-- تشغيل الصوت بالخلفية -->
+	<!-- دعم فتح/فحص تطبيقات المشغلات الخارجية (url_launcher / canLaunchUrl) -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>vlc</string>
+		<string>mxplayer</string>
+		<string>varplayer</string>
+	</array>
+
+	<!-- تشغيل بالخلفية: صوت + إشعارات/جلب -->
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
 	</array>
 </dict>
 </plist>
